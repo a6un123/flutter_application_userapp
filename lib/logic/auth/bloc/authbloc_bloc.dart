@@ -34,6 +34,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
+  // In _onLogin after emitting Authenticated state
+  // Add this to load the user's cart
   Future<void> _onLogin(Loginsubmit event, Emitter<AuthState> emit) async {
     emit(AuthLoading());
     try {

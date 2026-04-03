@@ -5,7 +5,6 @@ class OrderRepository {
   final _db = FirebaseFirestore.instance;
   final String _collection = 'orders';
 
-  // USER: place a new order
   Future<void> placeOrder(OrderModel order) async {
     final docRef = _db.collection(_collection).doc();
     final orderWithId = OrderModel(
@@ -13,6 +12,8 @@ class OrderRepository {
       userId: order.userId,
       userName: order.userName,
       userEmail: order.userEmail,
+      userPhone: order.userPhone,
+      userAltPhone: order.userAltPhone,
       items: order.items,
       totalPrice: order.totalPrice,
       status: 'pending',
@@ -22,7 +23,6 @@ class OrderRepository {
     await docRef.set(orderWithId.toFirestore());
   }
 
-  // USER: stream my orders in real-time
   Stream<List<OrderModel>> getUserOrders(String userId) {
     return _db
         .collection(_collection)
@@ -35,27 +35,11 @@ class OrderRepository {
         );
   }
 
-  // ADMIN: stream ALL orders in real-time
-  Stream<List<OrderModel>> getAllOrders() {
-    return _db
-        .collection(_collection)
-        .orderBy('orderedAt', descending: true)
-        .snapshots()
-        .map(
-          (snap) =>
-              snap.docs.map((doc) => OrderModel.fromFirestore(doc)).toList(),
-        );
-  }
-
-  // ADMIN: update order status
-  Future<void> updateStatus(String orderId, String status) async {
-    await _db.collection(_collection).doc(orderId).update({'status': status});
-  }
-
-  // ADMIN: cancel order
+  // ← NEW — user can cancel only pending orders
   Future<void> cancelOrder(String orderId) async {
     await _db.collection(_collection).doc(orderId).update({
       'status': 'cancelled',
+      'cancelledAt': FieldValue.serverTimestamp(),
     });
   }
 }

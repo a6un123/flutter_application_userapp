@@ -13,6 +13,8 @@ class OrderLoading extends OrderState {}
 
 class OrderPlacedSuccess extends OrderState {}
 
+class OrderCancelledSuccess extends OrderState {} // ← NEW
+
 class OrdersLoaded extends OrderState {
   final List<OrderModel> orders;
   const OrdersLoaded(this.orders);

@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_userapp/data/models/productmodel/productmodel.dart';
 import 'package:flutter_application_userapp/logic/auth/bloc/authbloc_bloc.dart';
@@ -10,9 +12,9 @@ import 'package:flutter_application_userapp/logic/product/bloc/productbloc_bloc.
 import 'package:flutter_application_userapp/logic/product/bloc/productbloc_event.dart';
 import 'package:flutter_application_userapp/logic/product/bloc/productbloc_state.dart';
 import 'package:flutter_application_userapp/view/cartscreen/cartscreen.dart';
+import 'package:flutter_application_userapp/view/notificationscreen/notificationscreen.dart';
 import 'package:flutter_application_userapp/view/ordersscreen/orderscreen.dart';
 import 'package:flutter_application_userapp/view/productdetailscreen/productdetailscsreen.dart';
-
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -83,6 +85,8 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+
     return Scaffold(
       drawer: const _AppDrawer(),
       appBar: AppBar(
@@ -93,7 +97,52 @@ class _HomeScreenState extends State<HomeScreen>
         backgroundColor: Colors.indigo,
         foregroundColor: Colors.white,
         actions: [
-          // Cart icon with badge
+          // ── Notification Bell ─────────────────
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('notifications')
+                .where('userId', isEqualTo: uid)
+                .where('isRead', isEqualTo: false)
+                .snapshots(),
+            builder: (context, snapshot) {
+              final count = snapshot.data?.docs.length ?? 0;
+              return Stack(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.notifications_outlined),
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const NotificationScreen(),
+                      ),
+                    ),
+                  ),
+                  if (count > 0)
+                    Positioned(
+                      right: 6,
+                      top: 6,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          '$count',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+
+          // ── Cart Icon with Badge ──────────────
           BlocBuilder<CartBloc, CartState>(
             builder: (context, cartState) {
               return Stack(
@@ -128,10 +177,6 @@ class _HomeScreenState extends State<HomeScreen>
                 ],
               );
             },
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => context.read<AuthBloc>().add(LogoutEvent()),
           ),
         ],
         bottom: PreferredSize(
@@ -250,7 +295,7 @@ class _HomeScreenState extends State<HomeScreen>
   }
 }
 
-// ── Product Grid ─────────────────────────────────────────
+// ── Product Grid ───────────────────────────────────────────
 class _ProductGrid extends StatelessWidget {
   final List<Productmodel> products;
   final String searchQuery;
@@ -290,7 +335,7 @@ class _ProductGrid extends StatelessWidget {
   }
 }
 
-// ── Product Card ─────────────────────────────────────────
+// ── Product Card ───────────────────────────────────────────
 class _ProductCard extends StatelessWidget {
   final Productmodel product;
   const _ProductCard({required this.product});
@@ -431,7 +476,7 @@ class _ProductCard extends StatelessWidget {
   }
 }
 
-// ── App Drawer ───────────────────────────────────────────
+// ── App Drawer ─────────────────────────────────────────────
 class _AppDrawer extends StatelessWidget {
   const _AppDrawer();
 
@@ -440,6 +485,7 @@ class _AppDrawer extends StatelessWidget {
     final authState = context.watch<AuthBloc>().state;
     final userName = authState is Authenticated ? authState.name : 'User';
     final userEmail = authState is Authenticated ? authState.email : '';
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
 
     return Drawer(
       child: Column(
@@ -467,6 +513,7 @@ class _AppDrawer extends StatelessWidget {
             child: ListView(
               padding: EdgeInsets.zero,
               children: [
+                // Home
                 ListTile(
                   leading: const Icon(
                     Icons.home_outlined,
@@ -475,6 +522,8 @@ class _AppDrawer extends StatelessWidget {
                   title: const Text('Home'),
                   onTap: () => Navigator.pop(context),
                 ),
+
+                // Cart
                 ListTile(
                   leading: const Icon(
                     Icons.shopping_cart_outlined,
@@ -509,7 +558,10 @@ class _AppDrawer extends StatelessWidget {
                     );
                   },
                 ),
+
                 const Divider(),
+
+                // Orders
                 ListTile(
                   leading: const Icon(
                     Icons.receipt_long_outlined,
@@ -521,6 +573,50 @@ class _AppDrawer extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => const OrdersScreen()),
+                    );
+                  },
+                ),
+
+                // Notifications
+                ListTile(
+                  leading: const Icon(
+                    Icons.notifications_outlined,
+                    color: Colors.indigo,
+                  ),
+                  title: const Text('Notifications'),
+                  trailing: StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('notifications')
+                        .where('userId', isEqualTo: uid)
+                        .where('isRead', isEqualTo: false)
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      final count = snapshot.data?.docs.length ?? 0;
+                      if (count == 0) return const SizedBox();
+                      return Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          '$count',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const NotificationScreen(),
+                      ),
                     );
                   },
                 ),

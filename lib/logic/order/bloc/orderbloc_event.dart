@@ -21,6 +21,8 @@ class PlaceOrder extends OrderEvent {
   final String userId;
   final String userName;
   final String userEmail;
+  final String userPhone;
+  final String userAltPhone;
 
   const PlaceOrder({
     required this.items,
@@ -29,6 +31,8 @@ class PlaceOrder extends OrderEvent {
     required this.userId,
     required this.userName,
     required this.userEmail,
+    this.userPhone = '',
+    this.userAltPhone = '',
   });
 
   @override
@@ -39,5 +43,15 @@ class PlaceOrder extends OrderEvent {
     userId,
     userName,
     userEmail,
+    userPhone,
+    userAltPhone,
   ];
+}
+
+// ← NEW
+class CancelMyOrder extends OrderEvent {
+  final String orderId;
+  const CancelMyOrder(this.orderId);
+  @override
+  List<Object?> get props => [orderId];
 }

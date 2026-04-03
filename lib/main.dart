@@ -6,17 +6,21 @@ import 'package:flutter_application_userapp/data/repositiories/productrepostiore
 import 'package:flutter_application_userapp/firebase_options.dart';
 import 'package:flutter_application_userapp/logic/auth/bloc/authbloc_bloc.dart';
 import 'package:flutter_application_userapp/logic/auth/bloc/authbloc_event.dart';
+import 'package:flutter_application_userapp/logic/auth/bloc/authbloc_state.dart';
 import 'package:flutter_application_userapp/logic/cart/bloc/cartbloc_bloc.dart';
+import 'package:flutter_application_userapp/logic/cart/bloc/cartbloc_event.dart';
 import 'package:flutter_application_userapp/logic/order/bloc/orderbloc_bloc.dart';
 import 'package:flutter_application_userapp/logic/product/bloc/productbloc_bloc.dart';
 import 'package:flutter_application_userapp/logic/product/bloc/productbloc_event.dart';
 import 'package:flutter_application_userapp/router/approuter.dart';
+import 'package:flutter_application_userapp/services/notificationservices.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await NotificationService.initialize();
   runApp(const MyApp());
 }
 
@@ -36,6 +40,7 @@ class _MyAppState extends State<MyApp> {
   late final ProductBloc _productBloc;
   late final OrderBloc _orderBloc;
   late final GoRouter _router;
+  late final CartBloc _cartBloc;
 
   @override
   void initState() {
@@ -44,6 +49,16 @@ class _MyAppState extends State<MyApp> {
     _productBloc = ProductBloc(_productRepository)..add(FetchProducts());
     _orderBloc = OrderBloc(_orderRepository);
     _router = createRouter(_authBloc);
+
+    _authBloc.stream.listen((AuthState) {
+      if (AuthState is Authenticated) {
+        // User logged in — load their cart
+        _cartBloc.add(LoadCart(AuthState.uid));
+      } else if (AuthState is Unauthenticated) {
+        // User logged out — clear cart
+        _cartBloc.add(ClearCart());
+      }
+    });
   }
 
   @override
